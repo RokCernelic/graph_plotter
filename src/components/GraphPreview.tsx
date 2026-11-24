@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { GraphConfig, TextNote } from '@/types';
-import { generateGraphSVG, getDefaultLabelPositions, getContentBounds } from '@/utils/svgGenerator';
+import { generateGraphSVG, getDefaultLabelPositions, getContentBounds, AXIS_LABEL_FS } from '@/utils/svgGenerator';
 import { CM_TO_PX, getGraphDimensions, getScaleInfo, generateTicks } from '@/utils/graphCalculations';
 
 interface GraphPreviewProps {
@@ -166,7 +166,7 @@ function DraggableLabel({ text, svgX, svgY, displayScale, isXLabel, weight = 600
   const didDrag = useRef(false);
   const cancelled = useRef(false);
 
-  const fontSize = Math.max(10, Math.round(12 * displayScale));
+  const fontSize = Math.max(10, Math.round((weight === 400 ? 12 : AXIS_LABEL_FS) * displayScale));
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0 || isEditing) return;

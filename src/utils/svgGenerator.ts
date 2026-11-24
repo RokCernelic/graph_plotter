@@ -2,6 +2,7 @@ import { GraphConfig, Series } from '@/types';
 import { getGraphDimensions, getScaleInfo, dataToPixel, generateTicks, GraphDimensions, ScaleInfo } from './graphCalculations';
 
 const ARROW_EXT = 30;
+export const AXIS_LABEL_FS = 15;
 const CLIP_PAD = 8; // data may overshoot the plot area slightly so edge points/lines are not cut off
 
 function escapeXml(s: string): string {
@@ -218,8 +219,9 @@ export function getContentBounds(config: GraphConfig): ContentBounds {
   }
 
   // axis labels (bold 12px; x is vertically centred, y sits on its baseline)
-  add(xPos.x, xPos.y - 8, xPos.x + tw(config.x_label, 7.6), xPos.y + 8);
-  add(yPos.x, yPos.y - 12, yPos.x + tw(config.y_label, 7.6), yPos.y + 4);
+  const lw = AXIS_LABEL_FS * 0.64;
+  add(xPos.x, xPos.y - AXIS_LABEL_FS * 0.65, xPos.x + tw(config.x_label, lw), xPos.y + AXIS_LABEL_FS * 0.65);
+  add(yPos.x, yPos.y - AXIS_LABEL_FS, yPos.x + tw(config.y_label, lw), yPos.y + 5);
 
   for (const t of config.texts ?? []) {
     const px = dim.marginLeft + (t.x - config.x_min) * scale.xScale;
@@ -318,12 +320,12 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
     const yPos = config.y_label_pos ?? defaults.yLabel;
     lines.push(
       `<text x="${xPos.x.toFixed(1)}" y="${xPos.y.toFixed(1)}" ` +
-      `font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" ` +
+      `font-family="Inter, system-ui, sans-serif" font-size="${AXIS_LABEL_FS}" font-weight="600" ` +
       `fill="#2c2c2c" dominant-baseline="central">${escapeXml(config.x_label)}</text>`
     );
     lines.push(
       `<text x="${yPos.x.toFixed(1)}" y="${yPos.y.toFixed(1)}" ` +
-      `font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" ` +
+      `font-family="Inter, system-ui, sans-serif" font-size="${AXIS_LABEL_FS}" font-weight="600" ` +
       `fill="#2c2c2c" dominant-baseline="auto">${escapeXml(config.y_label)}</text>`
     );
   }
