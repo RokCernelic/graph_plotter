@@ -3,6 +3,8 @@ import { getGridMode, hideXNumbers, hideYNumbers, getGraphDimensions, getScaleIn
 
 const ARROW_EXT = 30;
 export const AXIS_LABEL_FS = 15;
+const TICK_FS = 14;
+const NAME_FS = 15;
 const CLIP_PAD = 8; // data may overshoot the plot area slightly so edge points/lines are not cut off
 
 function escapeXml(s: string): string {
@@ -173,15 +175,15 @@ function nameShifts(config: GraphConfig) {
   const scale = getScaleInfo(config, dim);
   const xt = hideXNumbers(config) ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)
     .filter(t => !isTickHidden(config.hidden_x_ticks, t.value))
-    .map(t => ({ px: dim.marginLeft + (t.value - config.x_min) * scale.xScale, half: t.label.length * 3.4 + 2 }));
+    .map(t => ({ px: dim.marginLeft + (t.value - config.x_min) * scale.xScale, half: t.label.length * TICK_FS * 0.31 + 2 }));
   const yt = hideYNumbers(config) ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)
     .filter(t => !isTickHidden(config.hidden_y_ticks, t.value))
-    .map(t => ({ py: dim.marginTop + (config.y_max - t.value) * scale.yScale, width: t.label.length * 6.8 + 3 }));
+    .map(t => ({ py: dim.marginTop + (config.y_max - t.value) * scale.yScale, width: t.label.length * TICK_FS * 0.62 + 3 }));
   return {
     // extra downward offset (px) for an x name centred at px
-    x: (px: number, nameLen: number) => xt.some(t => Math.abs(t.px - px) < t.half + nameLen * 3.8 + 2) ? 16 : 0,
+    x: (px: number, nameLen: number) => xt.some(t => Math.abs(t.px - px) < t.half + nameLen * NAME_FS * 0.32 + 2) ? NAME_FS + 5 : 0,
     // extra leftward offset (px) for a y name at py
-    y: (py: number) => Math.max(0, ...yt.filter(t => Math.abs(t.py - py) < 11).map(t => t.width + 4)),
+    y: (py: number) => Math.max(0, ...yt.filter(t => Math.abs(t.py - py) < (TICK_FS + NAME_FS) / 2).map(t => t.width + 4)),
   };
 }
 
@@ -219,21 +221,21 @@ export function getContentBounds(config: GraphConfig): ContentBounds {
   for (const t of hideXNumbers(config) ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)) {
     if (isTickHidden(config.hidden_x_ticks, t.value)) continue;
     const px = dim.marginLeft + (t.value - config.x_min) * scale.xScale;
-    const w = tw(t.label, 6.8);
-    add(px - w / 2, xAxisY, px + w / 2, xAxisY + 21);
+    const w = tw(t.label, TICK_FS * 0.62);
+    add(px - w / 2, xAxisY, px + w / 2, xAxisY + 5 + TICK_FS + 4);
   }
   for (const t of hideYNumbers(config) ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)) {
     if (isTickHidden(config.hidden_y_ticks, t.value)) continue;
     const py = dim.marginTop + (config.y_max - t.value) * scale.yScale;
-    add(yAxisX - 8 - tw(t.label, 6.8), py - 7, yAxisX, py + 7);
+    add(yAxisX - 8 - tw(t.label, TICK_FS * 0.62), py - TICK_FS / 2 - 2, yAxisX, py + TICK_FS / 2 + 2);
   }
 
   for (const sr of config.series) {
     for (const p of sr.data_points) {
       const px = dim.marginLeft + (p.x - config.x_min) * scale.xScale;
       const py = dim.marginTop + (config.y_max - p.y) * scale.yScale;
-      if (p.x_name) { const n = p.x_name.replace(/[_{}]/g, ''); const w = tw(n, 7.6); add(px - w / 2, xAxisY, px + w / 2, xAxisY + 24 + shifts.x(px, n.length)); }
-      if (p.y_name) add(yAxisX - 8 - shifts.y(py) - tw(p.y_name.replace(/[_{}]/g, ''), 7.6), py - 9, yAxisX, py + 9);
+      if (p.x_name) { const n = p.x_name.replace(/[_{}]/g, ''); const w = tw(n, NAME_FS * 0.64); add(px - w / 2, xAxisY, px + w / 2, xAxisY + 5 + NAME_FS + 6 + shifts.x(px, n.length)); }
+      if (p.y_name) add(yAxisX - 8 - shifts.y(py) - tw(p.y_name.replace(/[_{}]/g, ''), NAME_FS * 0.64), py - NAME_FS / 2 - 3, yAxisX, py + NAME_FS / 2 + 3);
     }
   }
 
@@ -316,16 +318,16 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
   lines.push('</g>');
 
   // ── Tick marks + labels ───────────────────────────────────────────────────
-  lines.push('<g font-family="Inter, system-ui, sans-serif" font-size="11" fill="#2c2c2c" text-anchor="middle">');
+  lines.push(`<g font-family="Inter, system-ui, sans-serif" font-size="${TICK_FS}" fill="#2c2c2c" text-anchor="middle">`);
   for (const tick of hideXNumbers(config) ? [] : xTicks) {
     const px = dim.marginLeft + (tick.value - config.x_min) * scale.xScale;
     lines.push(`<line x1="${px.toFixed(1)}" y1="${xAxisY.toFixed(1)}" x2="${px.toFixed(1)}" y2="${(xAxisY + 5).toFixed(1)}" stroke="#2c2c2c" stroke-width="1"/>`);
     if (!isTickHidden(config.hidden_x_ticks, tick.value))
-      lines.push(`<text x="${px.toFixed(1)}" y="${(xAxisY + 16).toFixed(1)}">${tick.label}</text>`);
+      lines.push(`<text x="${px.toFixed(1)}" y="${(xAxisY + 5 + TICK_FS).toFixed(1)}">${tick.label}</text>`);
   }
   lines.push('</g>');
 
-  lines.push('<g font-family="Inter, system-ui, sans-serif" font-size="11" fill="#2c2c2c" text-anchor="end">');
+  lines.push(`<g font-family="Inter, system-ui, sans-serif" font-size="${TICK_FS}" fill="#2c2c2c" text-anchor="end">`);
   for (const tick of hideYNumbers(config) ? [] : yTicks) {
     const py = dim.marginTop + (config.y_max - tick.value) * scale.yScale;
     lines.push(`<line x1="${(yAxisX - 5).toFixed(1)}" y1="${py.toFixed(1)}" x2="${yAxisX.toFixed(1)}" y2="${py.toFixed(1)}" stroke="#2c2c2c" stroke-width="1"/>`);
@@ -393,11 +395,11 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
       const ky = `y:${c.py.toFixed(1)}:${p.y_name}`;
       if (p.x_name && !drawnNames.has(kx)) {
         drawnNames.add(kx);
-        lines.push(`<text x="${c.px.toFixed(1)}" y="${(xAxisY + 17 + shifts.x(c.px, p.x_name.replace(/[_{}]/g, '').length)).toFixed(1)}" font-family="Inter, system-ui, sans-serif" font-size="12" font-style="italic" fill="#2c2c2c" text-anchor="middle">${richText(p.x_name)}</text>`);
+        lines.push(`<text x="${c.px.toFixed(1)}" y="${(xAxisY + 5 + NAME_FS + shifts.x(c.px, p.x_name.replace(/[_{}]/g, '').length)).toFixed(1)}" font-family="Inter, system-ui, sans-serif" font-size="${NAME_FS}" font-style="italic" fill="#2c2c2c" text-anchor="middle">${richText(p.x_name)}</text>`);
       }
       if (p.y_name && !drawnNames.has(ky)) {
         drawnNames.add(ky);
-        lines.push(`<text x="${(yAxisX - 8 - shifts.y(c.py)).toFixed(1)}" y="${c.py.toFixed(1)}" font-family="Inter, system-ui, sans-serif" font-size="12" font-style="italic" fill="#2c2c2c" text-anchor="end" dominant-baseline="central">${richText(p.y_name)}</text>`);
+        lines.push(`<text x="${(yAxisX - 8 - shifts.y(c.py)).toFixed(1)}" y="${c.py.toFixed(1)}" font-family="Inter, system-ui, sans-serif" font-size="${NAME_FS}" font-style="italic" fill="#2c2c2c" text-anchor="end" dominant-baseline="central">${richText(p.y_name)}</text>`);
       }
     }
   }
