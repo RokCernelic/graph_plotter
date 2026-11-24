@@ -57,6 +57,20 @@ export default function Home() {
     });
   }, []);
 
+  const handleAddPoints = useCallback((seriesId: string, pts: Array<{ x: number; y: number }>) => {
+    setConfig(prev => ({
+      ...prev,
+      series: prev.series.map(s => {
+        if (s.id !== seriesId) return s;
+        const next = [...s.data_points];
+        for (const p of pts) {
+          if (!next.some(q => q.x === p.x && q.y === p.y)) next.push({ id: crypto.randomUUID(), x: p.x, y: p.y });
+        }
+        return { ...s, data_points: next };
+      }),
+    }));
+  }, []);
+
   const handleRemovePoint = useCallback((seriesId: string, pointId: string) => {
     setConfig(prev => {
       const newSeries = prev.series.map(s =>
@@ -188,7 +202,7 @@ export default function Home() {
 
         {/* Main graph area */}
         <main style={{ flex: 1, overflow: 'auto', padding: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-          <GraphPreview config={config} onUpdateConfig={handleUpdateConfig} />
+          <GraphPreview config={config} onUpdateConfig={handleUpdateConfig} activeSeries={activeSeries} onAddPoints={handleAddPoints} />
         </main>
       </div>
     </div>

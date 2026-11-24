@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { GraphConfig } from '@/types';
+import NumInput from './NumInput';
 
 interface ControlsProps {
   config: GraphConfig;
@@ -146,11 +147,6 @@ function LabelInput({ value, onChange, placeholder }: { value: string; onChange:
 }
 
 export default function Controls({ config, onUpdateConfig }: ControlsProps) {
-  const num = (val: string, key: keyof GraphConfig) => {
-    const n = parseFloat(val);
-    if (!isNaN(n)) onUpdateConfig({ [key]: n });
-  };
-
   return (
     <div>
       <p className="section-label">Nastavitve osi</p>
@@ -173,19 +169,19 @@ export default function Controls({ config, onUpdateConfig }: ControlsProps) {
 
       <Row>
         <Field label="X min">
-          <input type="number" value={config.x_min} onChange={e => num(e.target.value, 'x_min')} step="1" />
+          <NumInput value={config.x_min} onCommit={n => onUpdateConfig({ x_min: n })} step="1" />
         </Field>
         <Field label="X max">
-          <input type="number" value={config.x_max} onChange={e => num(e.target.value, 'x_max')} step="1" />
+          <NumInput value={config.x_max} onCommit={n => onUpdateConfig({ x_max: n })} step="1" />
         </Field>
       </Row>
 
       <Row>
         <Field label="Y min">
-          <input type="number" value={config.y_min} onChange={e => num(e.target.value, 'y_min')} step="1" />
+          <NumInput value={config.y_min} onCommit={n => onUpdateConfig({ y_min: n })} step="1" />
         </Field>
         <Field label="Y max">
-          <input type="number" value={config.y_max} onChange={e => num(e.target.value, 'y_max')} step="1" />
+          <NumInput value={config.y_max} onCommit={n => onUpdateConfig({ y_max: n })} step="1" />
         </Field>
       </Row>
 
@@ -195,10 +191,10 @@ export default function Controls({ config, onUpdateConfig }: ControlsProps) {
 
       <Row>
         <Field label="Širina (cm)">
-          <input type="number" value={config.width_cm} onChange={e => num(e.target.value, 'width_cm')} min="4" max="25" step="0.5" />
+          <NumInput value={config.width_cm} onCommit={n => onUpdateConfig({ width_cm: n })} min="4" max="25" step="0.5" />
         </Field>
         <Field label="Višina (cm)">
-          <input type="number" value={config.height_cm} onChange={e => num(e.target.value, 'height_cm')} min="4" max="25" step="0.5" />
+          <NumInput value={config.height_cm} onCommit={n => onUpdateConfig({ height_cm: n })} min="4" max="25" step="0.5" />
         </Field>
       </Row>
 

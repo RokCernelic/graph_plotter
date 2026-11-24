@@ -14,6 +14,8 @@ export interface Series {
   data_points: DataPoint[];
 }
 
+export interface LabelPos { x: number; y: number; }
+
 export interface GraphConfig {
   id?: string;
   name?: string;
@@ -21,10 +23,14 @@ export interface GraphConfig {
   height_cm: number;
   x_label: string;
   y_label: string;
+  x_label_pos?: LabelPos;
+  y_label_pos?: LabelPos;
   x_min: number;
   x_max: number;
   y_min: number;
   y_max: number;
+  x_tick_step?: number;
+  y_tick_step?: number;
   series: Series[];
 }
 

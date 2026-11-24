@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Series, SERIES_COLORS } from '@/types';
+import { Series } from '@/types';
+import NumInput from './NumInput';
 
 interface DataTableProps {
   series: Series[];
@@ -36,14 +37,6 @@ export default function DataTable({
 }: DataTableProps) {
   const activeS = series.find(s => s.id === activeSeries) ?? series[0];
   const dataPoints = activeS?.data_points ?? [];
-
-  const handleChange = (id: string, field: 'x' | 'y', value: string) => {
-    const n = parseFloat(value);
-    if (!isNaN(n)) {
-      const p = dataPoints.find(p => p.id === id);
-      if (p) onUpdatePoint(activeS.id, id, field === 'x' ? n : p.x, field === 'y' ? n : p.y);
-    }
-  };
 
   const totalPoints = series.reduce((n, s) => n + s.data_points.length, 0);
 
@@ -143,19 +136,17 @@ export default function DataTable({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {dataPoints.map((point, i) => (
               <div key={point.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 28px', gap: 4, alignItems: 'center' }}>
-                <input
-                  type="number"
+                <NumInput
                   value={point.x}
-                  onChange={e => handleChange(point.id, 'x', e.target.value)}
+                  onCommit={n => onUpdatePoint(activeS.id, point.id, n, point.y)}
                   step="0.1"
-                  aria-label={`X ${i + 1}`}
+                  ariaLabel={`X ${i + 1}`}
                 />
-                <input
-                  type="number"
+                <NumInput
                   value={point.y}
-                  onChange={e => handleChange(point.id, 'y', e.target.value)}
+                  onCommit={n => onUpdatePoint(activeS.id, point.id, point.x, n)}
                   step="0.1"
-                  aria-label={`Y ${i + 1}`}
+                  ariaLabel={`Y ${i + 1}`}
                 />
                 <button
                   className="btn btn-ghost"

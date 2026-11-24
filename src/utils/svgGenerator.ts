@@ -103,12 +103,29 @@ function buildSeriesPath(
   return series.smooth ? naturalCubicSplinePath(pts) : straightLinePath(pts);
 }
 
-export function generateGraphSVG(config: GraphConfig, forExport = false): string {
+export function getDefaultLabelPositions(config: GraphConfig): {
+  xLabel: { x: number; y: number };
+  yLabel: { x: number; y: number };
+} {
+  const dim = getGraphDimensions(config);
+  const xRange = config.x_max - config.x_min;
+  const yRange = config.y_max - config.y_min;
+  const xOriginPx = dim.marginLeft + ((0 - config.x_min) / xRange) * dim.plotWidth;
+  const yOriginPx = dim.marginTop + ((config.y_max - 0) / yRange) * dim.plotHeight;
+  const xAxisY = Math.min(Math.max(yOriginPx, dim.marginTop), dim.marginTop + dim.plotHeight);
+  const yAxisX = Math.min(Math.max(xOriginPx, dim.marginLeft), dim.marginLeft + dim.plotWidth);
+  return {
+    xLabel: { x: dim.marginLeft + dim.plotWidth + ARROW_EXT + 6, y: xAxisY },
+    yLabel: { x: yAxisX + 5, y: dim.marginTop - ARROW_EXT - 2 },
+  };
+}
+
+export function generateGraphSVG(config: GraphConfig, forExport = false, skipLabels = false): string {
   const dim = getGraphDimensions(config);
   const scale = getScaleInfo(config, dim);
 
-  const xTicks = generateTicks(config.x_min, config.x_max);
-  const yTicks = generateTicks(config.y_min, config.y_max);
+  const xTicks = generateTicks(config.x_min, config.x_max, 5, config.x_tick_step);
+  const yTicks = generateTicks(config.y_min, config.y_max, 5, config.y_tick_step);
 
   const xRange = config.x_max - config.x_min;
   const yRange = config.y_max - config.y_min;
@@ -182,18 +199,21 @@ export function generateGraphSVG(config: GraphConfig, forExport = false): string
   lines.push('</g>');
 
   // ── Axis labels ───────────────────────────────────────────────────────────
-  lines.push(
-    `<text x="${(dim.marginLeft + dim.plotWidth + ARROW_EXT + 6).toFixed(1)}" ` +
-    `y="${xAxisY.toFixed(1)}" ` +
-    `font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" ` +
-    `fill="#2c2c2c" dominant-baseline="central">${escapeXml(config.x_label)}</text>`
-  );
-  lines.push(
-    `<text x="${(yAxisX + 5).toFixed(1)}" ` +
-    `y="${(dim.marginTop - ARROW_EXT - 2).toFixed(1)}" ` +
-    `font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" ` +
-    `fill="#2c2c2c" dominant-baseline="auto">${escapeXml(config.y_label)}</text>`
-  );
+  if (!skipLabels) {
+    const defaults = getDefaultLabelPositions(config);
+    const xPos = config.x_label_pos ?? defaults.xLabel;
+    const yPos = config.y_label_pos ?? defaults.yLabel;
+    lines.push(
+      `<text x="${xPos.x.toFixed(1)}" y="${xPos.y.toFixed(1)}" ` +
+      `font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" ` +
+      `fill="#2c2c2c" dominant-baseline="central">${escapeXml(config.x_label)}</text>`
+    );
+    lines.push(
+      `<text x="${yPos.x.toFixed(1)}" y="${yPos.y.toFixed(1)}" ` +
+      `font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" ` +
+      `fill="#2c2c2c" dominant-baseline="auto">${escapeXml(config.y_label)}</text>`
+    );
+  }
 
   // ── Data: one group per series ────────────────────────────────────────────
   for (const series of config.series) {

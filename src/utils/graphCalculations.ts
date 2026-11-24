@@ -73,12 +73,17 @@ export interface TickInfo {
   label: string;
 }
 
-export function generateTicks(min: number, max: number, maxTicks: number = 5): TickInfo[] {
+export function generateTicks(min: number, max: number, maxTicks: number = 5, customStep?: number): TickInfo[] {
   const range = max - min;
-  if (range === 0) return [{ value: min, label: String(min) }];
+  if (range <= 0) return [{ value: min, label: String(min) }];
 
-  let step = Math.pow(10, Math.floor(Math.log10(range)));
-  if (range / step < maxTicks) step = range / maxTicks;
+  let step: number;
+  if (customStep && customStep > 0 && range / customStep <= 200) {
+    step = customStep;
+  } else {
+    step = Math.pow(10, Math.floor(Math.log10(range)));
+    if (range / step < maxTicks) step = range / maxTicks;
+  }
 
   const ticks: TickInfo[] = [];
   let current = Math.ceil(min / step) * step;
