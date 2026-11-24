@@ -122,8 +122,8 @@ export async function POST(req: Request) {
       hidden_x_ticks: undefined,
       hidden_y_ticks: undefined,
       texts: undefined,
-      x_label_pos: undefined,
-      y_label_pos: undefined,
+      x_label_offset: undefined,
+      y_label_offset: undefined,
       series: t.series.slice(0, 5).map((s, i) => ({
         id: crypto.randomUUID(),
         name: s.name || `Serija ${i + 1}`,

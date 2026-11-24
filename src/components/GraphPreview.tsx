@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { GraphConfig, TextNote } from '@/types';
-import { generateGraphSVG, getDefaultLabelPositions, getContentBounds, AXIS_LABEL_FS } from '@/utils/svgGenerator';
+import { generateGraphSVG, getDefaultLabelPositions, getLabelPositions, getContentBounds, AXIS_LABEL_FS } from '@/utils/svgGenerator';
 import { CM_TO_PX, getGraphDimensions, getScaleInfo, generateTicks } from '@/utils/graphCalculations';
 
 interface GraphPreviewProps {
@@ -289,8 +289,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config.x_min, config.x_max, config.y_min, config.y_max, config.width_cm, config.height_cm]
   );
-  const xLabelPos = config.x_label_pos ?? defaultPos.xLabel;
-  const yLabelPos = config.y_label_pos ?? defaultPos.yLabel;
+  const { xLabel: xLabelPos, yLabel: yLabelPos } = useMemo(() => getLabelPositions(config), [config]);
 
   // ── Resize drag ──────────────────────────────────────────────────────────
   const dragState = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
@@ -601,7 +600,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
               text={config.x_label}
               svgX={xLabelPos.x - bounds.x} svgY={xLabelPos.y - bounds.y}
               displayScale={displayScale} isXLabel
-              onMove={(x, y) => onUpdateConfig({ x_label_pos: { x: x + bounds.x, y: y + bounds.y } })}
+              onMove={(x, y) => onUpdateConfig({ x_label_offset: { x: x + bounds.x - defaultPos.xLabel.x, y: y + bounds.y - defaultPos.xLabel.y } })}
               onTextChange={v => onUpdateConfig({ x_label: v })}
               onContextMenu={(sx, sy) => setMenu({ kind: 'label', axis: 'x', sx, sy })}
             />
@@ -609,7 +608,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
               text={config.y_label}
               svgX={yLabelPos.x - bounds.x} svgY={yLabelPos.y - bounds.y}
               displayScale={displayScale} isXLabel={false}
-              onMove={(x, y) => onUpdateConfig({ y_label_pos: { x: x + bounds.x, y: y + bounds.y } })}
+              onMove={(x, y) => onUpdateConfig({ y_label_offset: { x: x + bounds.x - defaultPos.yLabel.x, y: y + bounds.y - defaultPos.yLabel.y } })}
               onTextChange={v => onUpdateConfig({ y_label: v })}
               onContextMenu={(sx, sy) => setMenu({ kind: 'label', axis: 'y', sx, sy })}
             />

@@ -31,8 +31,8 @@ export interface GraphConfig {
   height_cm: number;
   x_label: string;
   y_label: string;
-  x_label_pos?: LabelPos;
-  y_label_pos?: LabelPos;
+  x_label_offset?: LabelPos; // offset from the default spot next to the axis arrow, so labels stay attached on resize
+  y_label_offset?: LabelPos;
   x_min: number;
   x_max: number;
   y_min: number;

@@ -212,9 +212,9 @@ export function getContentBounds(config: GraphConfig): ContentBounds {
   const xAxisY = Math.min(Math.max(yOriginPx, dim.marginTop), dim.marginTop + dim.plotHeight);
   const yAxisX = Math.min(Math.max(xOriginPx, dim.marginLeft), dim.marginLeft + dim.plotWidth);
   const scale = getScaleInfo(config, dim);
-  const def = getDefaultLabelPositions(config);
-  const xPos = config.x_label_pos ?? def.xLabel;
-  const yPos = config.y_label_pos ?? def.yLabel;
+  const lp = getLabelPositions(config);
+  const xPos = lp.xLabel;
+  const yPos = lp.yLabel;
 
   const shifts = nameShifts(config);
   let x0 = dim.marginLeft, x1 = dim.marginLeft + dim.plotWidth;
@@ -261,6 +261,14 @@ export function getContentBounds(config: GraphConfig): ContentBounds {
   }
 
   return { x: x0 - CROP_PAD, y: y0 - CROP_PAD, w: x1 - x0 + 2 * CROP_PAD, h: y1 - y0 + 2 * CROP_PAD };
+}
+
+export function getLabelPositions(config: GraphConfig) {
+  const d = getDefaultLabelPositions(config);
+  return {
+    xLabel: { x: d.xLabel.x + (config.x_label_offset?.x ?? 0), y: d.xLabel.y + (config.x_label_offset?.y ?? 0) },
+    yLabel: { x: d.yLabel.x + (config.y_label_offset?.x ?? 0), y: d.yLabel.y + (config.y_label_offset?.y ?? 0) },
+  };
 }
 
 export function generateGraphSVG(config: GraphConfig, forExport = false, skipLabels = false): string {
@@ -348,9 +356,9 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
 
   // ── Axis labels ───────────────────────────────────────────────────────────
   if (!skipLabels) {
-    const defaults = getDefaultLabelPositions(config);
-    const xPos = config.x_label_pos ?? defaults.xLabel;
-    const yPos = config.y_label_pos ?? defaults.yLabel;
+    const lp = getLabelPositions(config);
+    const xPos = lp.xLabel;
+    const yPos = lp.yLabel;
     lines.push(
       `<text x="${xPos.x.toFixed(1)}" y="${xPos.y.toFixed(1)}" ` +
       `font-family="Inter, system-ui, sans-serif" font-size="${AXIS_LABEL_FS}" font-weight="600" ` +
