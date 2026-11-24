@@ -26,8 +26,8 @@ export function getGraphDimensions(config: GraphConfig): GraphDimensions {
   const svgHeight = cmToPx(config.height_cm);
 
   // Fixed pixel margins — sized for arrows + horizontal axis labels
-  const marginTop = 30;
-  const marginRight = 90;
+  const marginTop = 48;
+  const marginRight = 100;
   const marginBottom = 36;
   const marginLeft = 44;
 

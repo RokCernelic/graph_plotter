@@ -2,6 +2,8 @@ export interface DataPoint {
   id: string;
   x: number;
   y: number;
+  x_name?: string; // symbolic label on the x axis (e.g. "t_1"), draws a dashed projection
+  y_name?: string; // symbolic label on the y axis (e.g. "s_k")
 }
 
 export const SERIES_COLORS = ['#0a2e0e', '#1e40af', '#b91c1c', '#7c3aed', '#b45309'];
@@ -15,6 +17,10 @@ export interface Series {
 }
 
 export interface LabelPos { x: number; y: number; }
+
+export interface Guide { id: string; x1: number; y1: number; x2: number; y2: number; }
+
+export interface TextNote { id: string; text: string; x: number; y: number; }
 
 export interface GraphConfig {
   id?: string;
@@ -31,7 +37,13 @@ export interface GraphConfig {
   y_max: number;
   x_tick_step?: number;
   y_tick_step?: number;
+  hidden_x_ticks?: number[];
+  hidden_y_ticks?: number[];
   series: Series[];
+  texts?: TextNote[];
+  guides?: Guide[];
+  hide_numbers?: boolean;
+  hide_grid?: boolean;
 }
 
 export const DEFAULT_GRAPH_CONFIG: GraphConfig = {

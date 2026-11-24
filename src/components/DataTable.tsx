@@ -16,7 +16,10 @@ interface DataTableProps {
   onAddPoint: (seriesId: string) => void;
   onRemovePoint: (seriesId: string, pointId: string) => void;
   onUpdatePoint: (seriesId: string, id: string, x: number, y: number) => void;
+  onUpdatePointNames: (seriesId: string, id: string, patch: { x_name?: string; y_name?: string }) => void;
 }
+
+const PALETTE = ['#0a2e0e', '#1e40af', '#b91c1c', '#7c3aed', '#b45309', '#111111', '#0f766e', '#db2777', '#6b7280'];
 
 const CurveIcon = () => (
   <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
@@ -33,10 +36,13 @@ const LineIcon = () => (
 export default function DataTable({
   series, activeSeries, onSelectSeries, onAddSeries, onRemoveSeries,
   onUpdateSeriesColor, onUpdateSeriesName, onUpdateSeriesSmooth,
-  onAddPoint, onRemovePoint, onUpdatePoint,
+  onAddPoint, onRemovePoint, onUpdatePoint, onUpdatePointNames,
 }: DataTableProps) {
   const activeS = series.find(s => s.id === activeSeries) ?? series[0];
   const dataPoints = activeS?.data_points ?? [];
+
+  const [namesOpen, setNamesOpen] = React.useState(false);
+  const showNames = namesOpen || dataPoints.some(p => p.x_name || p.y_name);
 
   const totalPoints = series.reduce((n, s) => n + s.data_points.length, 0);
 
@@ -125,6 +131,29 @@ export default function DataTable({
         </div>
       )}
 
+      {activeS && (
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+          {PALETTE.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onUpdateSeriesColor(activeS.id, c)}
+              title={c}
+              style={{
+                width: 20, height: 20, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
+                border: activeS.color.toLowerCase() === c ? '2px solid var(--ink)' : '2px solid var(--canvas)',
+                boxShadow: '0 0 0 1px var(--hairline)',
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)', marginBottom: 8, cursor: 'pointer' }}>
+        <input type="checkbox" checked={showNames} onChange={e => setNamesOpen(e.target.checked)} style={{ width: 'auto' }} />
+        Simbolne oznake točk (npr. t_1, s_k)
+      </label>
+
       {/* Data point rows */}
       {dataPoints.length > 0 && (
         <div style={{ marginBottom: 8 }}>
@@ -135,7 +164,8 @@ export default function DataTable({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {dataPoints.map((point, i) => (
-              <div key={point.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 28px', gap: 4, alignItems: 'center' }}>
+              <React.Fragment key={point.id}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 28px', gap: 4, alignItems: 'center' }}>
                 <NumInput
                   value={point.x}
                   onCommit={n => onUpdatePoint(activeS.id, point.id, n, point.y)}
@@ -159,6 +189,22 @@ export default function DataTable({
                   </svg>
                 </button>
               </div>
+              {showNames && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 28px', gap: 4, marginBottom: 4 }}>
+                  <input
+                    type="text" value={point.x_name ?? ''} placeholder="oznaka X"
+                    onChange={e => onUpdatePointNames(activeS.id, point.id, { x_name: e.target.value })}
+                    style={{ fontSize: 11 }}
+                  />
+                  <input
+                    type="text" value={point.y_name ?? ''} placeholder="oznaka Y"
+                    onChange={e => onUpdatePointNames(activeS.id, point.id, { y_name: e.target.value })}
+                    style={{ fontSize: 11 }}
+                  />
+                  <span />
+                </div>
+              )}
+              </React.Fragment>
             ))}
           </div>
         </div>

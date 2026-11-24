@@ -185,6 +185,15 @@ export default function Controls({ config, onUpdateConfig }: ControlsProps) {
         </Field>
       </Row>
 
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--body)', marginBottom: 4, cursor: 'pointer' }}>
+        <input type="checkbox" checked={!!config.hide_numbers} onChange={e => onUpdateConfig({ hide_numbers: e.target.checked })} style={{ width: 'auto' }} />
+        Brez številk na oseh
+      </label>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--body)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={!!config.hide_grid} onChange={e => onUpdateConfig({ hide_grid: e.target.checked })} style={{ width: 'auto' }} />
+        Brez mreže
+      </label>
+
       <hr className="divider" style={{ margin: '12px 0' }} />
 
       <p className="section-label">Velikost grafa</p>

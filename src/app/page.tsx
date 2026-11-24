@@ -145,19 +145,40 @@ export default function Home() {
     });
   }, []);
 
+  // A line drawn from an existing point extends that series; a disconnected one starts a new series.
   const handleAddPoints = useCallback((seriesId: string, pts: Array<{ x: number; y: number }>) => {
-    setConfig(prev => ({
-      ...prev,
-      series: prev.series.map(s => {
-        if (s.id !== seriesId) return s;
-        const next = [...s.data_points];
-        for (const p of pts) {
-          if (!next.some(q => q.x === p.x && q.y === p.y)) next.push({ id: crypto.randomUUID(), x: p.x, y: p.y });
-        }
-        return { ...s, data_points: next };
-      }),
-    }));
-  }, []);
+    setConfig(prev => {
+      const active = prev.series.find(s => s.id === seriesId);
+      const start = pts[0];
+      const connected = !active || active.data_points.length === 0 ||
+        active.data_points.some(q => q.x === start.x && q.y === start.y);
+
+      if (!connected && prev.series.length < SERIES_COLORS.length) {
+        const newId = crypto.randomUUID();
+        setActiveSeries(newId);
+        const created: Series = {
+          id: newId,
+          name: `Serija ${prev.series.length + 1}`,
+          color: SERIES_COLORS[prev.series.length % SERIES_COLORS.length],
+          smooth: false,
+          data_points: pts.map(p => ({ id: crypto.randomUUID(), x: p.x, y: p.y })),
+        };
+        return { ...prev, series: [...prev.series, created] };
+      }
+
+      return {
+        ...prev,
+        series: prev.series.map(s => {
+          if (s.id !== seriesId) return s;
+          const next = [...s.data_points];
+          for (const p of pts) {
+            if (!next.some(q => q.x === p.x && q.y === p.y)) next.push({ id: crypto.randomUUID(), x: p.x, y: p.y });
+          }
+          return { ...s, data_points: next };
+        }),
+      };
+    });
+  }, [setConfig]);
 
   const handleMovePoint = useCallback((seriesId: string, pointId: string, x: number, y: number) => {
     setConfig(prev => ({
@@ -167,6 +188,15 @@ export default function Home() {
       ),
     }));
   }, []);
+
+  const handleUpdatePointNames = useCallback((seriesId: string, pointId: string, patch: { x_name?: string; y_name?: string }) => {
+    setConfig(prev => ({
+      ...prev,
+      series: prev.series.map(s =>
+        s.id === seriesId ? { ...s, data_points: s.data_points.map(p => p.id === pointId ? { ...p, ...patch } : p) } : s
+      ),
+    }));
+  }, [setConfig]);
 
   const handleRemovePoint = useCallback((seriesId: string, pointId: string) => {
     setConfig(prev => {
@@ -309,6 +339,7 @@ export default function Home() {
             onAddPoint={handleAddPoint}
             onRemovePoint={handleRemovePoint}
             onUpdatePoint={handleUpdatePoint}
+            onUpdatePointNames={handleUpdatePointNames}
           />
           <hr className="divider" />
           <SaveLoad config={config} onLoadGraph={handleLoadGraph} />
