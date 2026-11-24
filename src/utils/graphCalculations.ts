@@ -68,6 +68,9 @@ export function dataToPixel(
   };
 }
 
+export const hideXNumbers = (c: GraphConfig) => c.hide_x_numbers ?? !!c.hide_numbers;
+export const hideYNumbers = (c: GraphConfig) => c.hide_y_numbers ?? !!c.hide_numbers;
+
 export function getGridMode(config: GraphConfig): 'both' | 'vertical' | 'horizontal' | 'none' {
   return config.grid_mode ?? (config.hide_grid ? 'none' : 'both');
 }

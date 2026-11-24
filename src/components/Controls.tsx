@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { GraphConfig, GridMode } from '@/types';
-import { getGridMode } from '@/utils/graphCalculations';
+import { getGridMode, hideXNumbers, hideYNumbers } from '@/utils/graphCalculations';
 import NumInput from './NumInput';
 
 interface ControlsProps {
@@ -216,8 +216,16 @@ export default function Controls({ config, onUpdateConfig }: ControlsProps) {
       </Row>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--body)', marginBottom: 4, cursor: 'pointer' }}>
-        <input type="checkbox" checked={!!config.hide_numbers} onChange={e => onUpdateConfig({ hide_numbers: e.target.checked })} style={{ width: 'auto' }} />
-        Brez številk na oseh
+        <input type="checkbox" checked={hideXNumbers(config)}
+          onChange={e => onUpdateConfig({ hide_x_numbers: e.target.checked, hide_y_numbers: hideYNumbers(config), hide_numbers: undefined })}
+          style={{ width: 'auto' }} />
+        Brez številk na osi X
+      </label>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--body)', marginBottom: 4, cursor: 'pointer' }}>
+        <input type="checkbox" checked={hideYNumbers(config)}
+          onChange={e => onUpdateConfig({ hide_y_numbers: e.target.checked, hide_x_numbers: hideXNumbers(config), hide_numbers: undefined })}
+          style={{ width: 'auto' }} />
+        Brez številk na osi Y
       </label>
       <Field label="Mreža">
         <select

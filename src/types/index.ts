@@ -44,7 +44,9 @@ export interface GraphConfig {
   series: Series[];
   texts?: TextNote[];
   guides?: Guide[];
-  hide_numbers?: boolean;
+  hide_numbers?: boolean; // legacy: both axes
+  hide_x_numbers?: boolean;
+  hide_y_numbers?: boolean;
   hide_grid?: boolean;
   grid_mode?: GridMode;
 }

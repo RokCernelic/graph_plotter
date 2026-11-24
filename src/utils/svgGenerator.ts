@@ -1,5 +1,5 @@
 import { GraphConfig, Series } from '@/types';
-import { getGridMode, getGraphDimensions, getScaleInfo, dataToPixel, generateTicks, GraphDimensions, ScaleInfo } from './graphCalculations';
+import { getGridMode, hideXNumbers, hideYNumbers, getGraphDimensions, getScaleInfo, dataToPixel, generateTicks, GraphDimensions, ScaleInfo } from './graphCalculations';
 
 const ARROW_EXT = 30;
 export const AXIS_LABEL_FS = 15;
@@ -171,10 +171,10 @@ function richText(name: string): string {
 function nameShifts(config: GraphConfig) {
   const dim = getGraphDimensions(config);
   const scale = getScaleInfo(config, dim);
-  const xt = config.hide_numbers ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)
+  const xt = hideXNumbers(config) ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)
     .filter(t => !isTickHidden(config.hidden_x_ticks, t.value))
     .map(t => ({ px: dim.marginLeft + (t.value - config.x_min) * scale.xScale, half: t.label.length * 3.4 + 2 }));
-  const yt = config.hide_numbers ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)
+  const yt = hideYNumbers(config) ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)
     .filter(t => !isTickHidden(config.hidden_y_ticks, t.value))
     .map(t => ({ py: dim.marginTop + (config.y_max - t.value) * scale.yScale, width: t.label.length * 6.8 + 3 }));
   return {
@@ -216,13 +216,13 @@ export function getContentBounds(config: GraphConfig): ContentBounds {
   add(dim.marginLeft, xAxisY - 5, dim.marginLeft + dim.plotWidth + ARROW_EXT + 9, xAxisY + 5);
 
   // tick numbers
-  for (const t of config.hide_numbers ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)) {
+  for (const t of hideXNumbers(config) ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)) {
     if (isTickHidden(config.hidden_x_ticks, t.value)) continue;
     const px = dim.marginLeft + (t.value - config.x_min) * scale.xScale;
     const w = tw(t.label, 6.8);
     add(px - w / 2, xAxisY, px + w / 2, xAxisY + 21);
   }
-  for (const t of config.hide_numbers ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)) {
+  for (const t of hideYNumbers(config) ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)) {
     if (isTickHidden(config.hidden_y_ticks, t.value)) continue;
     const py = dim.marginTop + (config.y_max - t.value) * scale.yScale;
     add(yAxisX - 8 - tw(t.label, 6.8), py - 7, yAxisX, py + 7);
@@ -317,7 +317,7 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
 
   // ── Tick marks + labels ───────────────────────────────────────────────────
   lines.push('<g font-family="Inter, system-ui, sans-serif" font-size="11" fill="#2c2c2c" text-anchor="middle">');
-  for (const tick of config.hide_numbers ? [] : xTicks) {
+  for (const tick of hideXNumbers(config) ? [] : xTicks) {
     const px = dim.marginLeft + (tick.value - config.x_min) * scale.xScale;
     lines.push(`<line x1="${px.toFixed(1)}" y1="${xAxisY.toFixed(1)}" x2="${px.toFixed(1)}" y2="${(xAxisY + 5).toFixed(1)}" stroke="#2c2c2c" stroke-width="1"/>`);
     if (!isTickHidden(config.hidden_x_ticks, tick.value))
@@ -326,7 +326,7 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
   lines.push('</g>');
 
   lines.push('<g font-family="Inter, system-ui, sans-serif" font-size="11" fill="#2c2c2c" text-anchor="end">');
-  for (const tick of config.hide_numbers ? [] : yTicks) {
+  for (const tick of hideYNumbers(config) ? [] : yTicks) {
     const py = dim.marginTop + (config.y_max - tick.value) * scale.yScale;
     lines.push(`<line x1="${(yAxisX - 5).toFixed(1)}" y1="${py.toFixed(1)}" x2="${yAxisX.toFixed(1)}" y2="${py.toFixed(1)}" stroke="#2c2c2c" stroke-width="1"/>`);
     if (!isTickHidden(config.hidden_y_ticks, tick.value))
