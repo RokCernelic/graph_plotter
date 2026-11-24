@@ -11,6 +11,7 @@ interface GraphPreviewProps {
   activeSeries: string;
   onAddPoints: (seriesId: string, pts: Array<{ x: number; y: number }>) => void;
   onMovePoint: (seriesId: string, pointId: string, x: number, y: number) => void;
+  onDeletePoint: (seriesId: string, pointId: string) => void;
 }
 
 const PREVIEW_MAX = 640;
@@ -262,7 +263,7 @@ function DraggableLabel({ text, svgX, svgY, displayScale, isXLabel, weight = 600
   );
 }
 
-export default function GraphPreview({ config, onUpdateConfig, activeSeries, onAddPoints, onMovePoint }: GraphPreviewProps) {
+export default function GraphPreview({ config, onUpdateConfig, activeSeries, onAddPoints, onMovePoint, onDeletePoint }: GraphPreviewProps) {
   const svgString = useMemo(() => generateGraphSVG(config, false, true), [config]);
   const bounds = useMemo(() => getContentBounds(config), [config]);
   const printSvg = useMemo(() => generateGraphSVG(config, true), [config]);
@@ -371,15 +372,15 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
     // plain drag: grid-snapped data line; Shift + drag: free dashed helper line
     e.preventDefault();
     const helper = e.shiftKey;
-    const start = toData(e.clientX, e.clientY, rect, helper);
+    const start = toData(e.clientX, e.clientY, rect);
     setDrawLine({ x1: start.x, y1: start.y, x2: start.x, y2: start.y, helper });
 
     const onMouseMove = (ev: MouseEvent) => {
-      const p = toData(ev.clientX, ev.clientY, rect, helper);
+      const p = toData(ev.clientX, ev.clientY, rect);
       setDrawLine({ x1: start.x, y1: start.y, x2: p.x, y2: p.y, helper });
     };
     const onMouseUp = (ev: MouseEvent) => {
-      const end = toData(ev.clientX, ev.clientY, rect, helper);
+      const end = toData(ev.clientX, ev.clientY, rect);
       setDrawLine(null);
       if (end.x !== start.x || end.y !== start.y) {
         if (helper) {
@@ -491,7 +492,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
       </div>
 
       <div className="no-print" style={{ fontSize: 11, color: 'var(--muted)' }}>
-        Vleci po grafu = nariši črto (točke se dodajo izbrani seriji) · Shift + vleci = črtkana pomožna črta (desni klik nanjo jo izbriše) · gumb »T« + klik = besedilo · desni klik na številke osi = korak in min · točke: vleci (Alt = prosto) · oznake osi: vleci, dvojni klik, desni klik
+        Vleci po grafu = nariši črto (točke se dodajo izbrani seriji) · Shift + vleci = črtkana pomožna črta, tudi po mreži (desni klik nanjo jo izbriše) · gumb »T« + klik = besedilo · desni klik na številke osi = korak in min · točke: vleci (Alt = prosto) · oznake osi: vleci, dvojni klik, desni klik
       </div>
 
       {/* Graph card with resize handle */}
@@ -566,6 +567,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
                   r="8" fill="transparent"
                   style={{ pointerEvents: 'all', cursor: 'grab' }}
                   onMouseDown={e => handlePointMouseDown(e, sr.id, pt.id)}
+                  onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onDeletePoint(sr.id, pt.id); }}
                 />
               )))}
             </svg>

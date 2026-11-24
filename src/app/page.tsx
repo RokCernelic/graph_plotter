@@ -198,6 +198,15 @@ export default function Home() {
     }));
   }, [setConfig]);
 
+  const handleDeletePoint = useCallback((seriesId: string, pointId: string) => {
+    setConfig(prev => ({
+      ...prev,
+      series: prev.series.map(s =>
+        s.id === seriesId ? { ...s, data_points: s.data_points.filter(p => p.id !== pointId) } : s
+      ),
+    }));
+  }, [setConfig]);
+
   const handleRemovePoint = useCallback((seriesId: string, pointId: string) => {
     setConfig(prev => {
       const newSeries = prev.series.map(s =>
@@ -347,7 +356,7 @@ export default function Home() {
 
         {/* Main graph area */}
         <main style={{ flex: 1, overflow: 'auto', padding: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-          <GraphPreview config={config} onUpdateConfig={handleUpdateConfig} activeSeries={activeSeries} onAddPoints={handleAddPoints} onMovePoint={handleMovePoint} />
+          <GraphPreview config={config} onUpdateConfig={handleUpdateConfig} activeSeries={activeSeries} onAddPoints={handleAddPoints} onMovePoint={handleMovePoint} onDeletePoint={handleDeletePoint} />
         </main>
       </div>
     </div>
