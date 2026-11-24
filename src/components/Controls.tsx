@@ -21,6 +21,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function StepInput({ value, onChange }: { value?: number; onChange: (v: number | undefined) => void }) {
+  const [text, setText] = useState(value != null ? String(value) : '');
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setText(value != null ? String(value) : '');
+  }, [value, focused]);
+  return (
+    <input
+      type="number" min="0" step="any" value={text} placeholder="samodejno"
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onChange={e => {
+        setText(e.target.value);
+        const n = parseFloat(e.target.value);
+        onChange(e.target.value.trim() === '' ? undefined : n > 0 ? n : undefined);
+      }}
+    />
+  );
+}
+
 function Row({ children }: { children: React.ReactNode }) {
   return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{children}</div>;
 }
@@ -183,6 +203,15 @@ export default function Controls({ config, onUpdateConfig }: ControlsProps) {
         </Field>
         <Field label="Y max">
           <NumInput value={config.y_max} onCommit={n => onUpdateConfig({ y_max: n })} step="1" />
+        </Field>
+      </Row>
+
+      <Row>
+        <Field label="Korak X">
+          <StepInput value={config.x_tick_step} onChange={v => onUpdateConfig({ x_tick_step: v })} />
+        </Field>
+        <Field label="Korak Y">
+          <StepInput value={config.y_tick_step} onChange={v => onUpdateConfig({ y_tick_step: v })} />
         </Field>
       </Row>
 

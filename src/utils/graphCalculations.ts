@@ -78,6 +78,13 @@ export interface TickInfo {
 }
 
 export function generateTicks(min: number, max: number, maxTicks: number = 5, customStep?: number): TickInfo[] {
+  const custom = buildTicks(min, max, maxTicks, customStep);
+  // a custom step that yields fewer than two ticks (e.g. step larger than the range) is ignored
+  if (customStep && customStep > 0 && custom.length < 2) return buildTicks(min, max, maxTicks);
+  return custom;
+}
+
+function buildTicks(min: number, max: number, maxTicks: number, customStep?: number): TickInfo[] {
   const range = max - min;
   if (range <= 0) return [{ value: min, label: String(min) }];
 
