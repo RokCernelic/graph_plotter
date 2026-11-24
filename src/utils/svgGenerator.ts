@@ -187,9 +187,20 @@ function nameShifts(config: GraphConfig) {
   };
 }
 
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+// Real text width in the browser; falls back to an estimate on the server.
+function textWidth(text: string, fs: number, weight = 400): number {
+  if (measureCtx === undefined) {
+    measureCtx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+  }
+  if (!measureCtx) return text.length * fs * 0.62;
+  measureCtx.font = `${weight} ${fs}px Inter, system-ui, sans-serif`;
+  return measureCtx.measureText(text).width;
+}
+
 export interface ContentBounds { x: number; y: number; w: number; h: number; }
 
-const CROP_PAD = 5;
+const CROP_PAD = 2;
 
 // Tight bounding box (SVG px) around everything visible: plot, axes, arrows, numbers, labels, notes.
 export function getContentBounds(config: GraphConfig): ContentBounds {
@@ -211,43 +222,42 @@ export function getContentBounds(config: GraphConfig): ContentBounds {
   const add = (ax: number, ay: number, bx: number, by: number) => {
     x0 = Math.min(x0, ax); y0 = Math.min(y0, ay); x1 = Math.max(x1, bx); y1 = Math.max(y1, by);
   };
-  const tw = (s: string, perChar: number) => s.length * perChar + 3;
+  const tw = (s: string, fs: number, weight = 400) => textWidth(s, fs, weight) + 1;
 
   // axes + arrowheads
-  add(yAxisX - 1, dim.marginTop - ARROW_EXT - 1, yAxisX + 5, dim.marginTop + dim.plotHeight);
-  add(dim.marginLeft, xAxisY - 5, dim.marginLeft + dim.plotWidth + ARROW_EXT + 9, xAxisY + 5);
+  add(yAxisX - 4, dim.marginTop - ARROW_EXT - 1, yAxisX + 4, dim.marginTop + dim.plotHeight);
+  add(dim.marginLeft, xAxisY - 4, dim.marginLeft + dim.plotWidth + ARROW_EXT + 1, xAxisY + 4);
 
   // tick numbers
   for (const t of hideXNumbers(config) ? [] : generateTicks(config.x_min, config.x_max, 5, config.x_tick_step)) {
     if (isTickHidden(config.hidden_x_ticks, t.value)) continue;
     const px = dim.marginLeft + (t.value - config.x_min) * scale.xScale;
-    const w = tw(t.label, TICK_FS * 0.62);
-    add(px - w / 2, xAxisY, px + w / 2, xAxisY + 5 + TICK_FS + 4);
+    const w = tw(t.label, TICK_FS);
+    add(px - w / 2, xAxisY, px + w / 2, xAxisY + 5 + TICK_FS + 2);
   }
   for (const t of hideYNumbers(config) ? [] : generateTicks(config.y_min, config.y_max, 5, config.y_tick_step)) {
     if (isTickHidden(config.hidden_y_ticks, t.value)) continue;
     const py = dim.marginTop + (config.y_max - t.value) * scale.yScale;
-    add(yAxisX - 8 - tw(t.label, TICK_FS * 0.62), py - TICK_FS / 2 - 2, yAxisX, py + TICK_FS / 2 + 2);
+    add(yAxisX - 8 - tw(t.label, TICK_FS), py - TICK_FS / 2 - 1, yAxisX, py + TICK_FS / 2 + 1);
   }
 
   for (const sr of config.series) {
     for (const p of sr.data_points) {
       const px = dim.marginLeft + (p.x - config.x_min) * scale.xScale;
       const py = dim.marginTop + (config.y_max - p.y) * scale.yScale;
-      if (p.x_name) { const n = p.x_name.replace(/[_{}]/g, ''); const w = tw(n, NAME_FS * 0.64); add(px - w / 2, xAxisY, px + w / 2, xAxisY + 5 + NAME_FS + 6 + shifts.x(px, n.length)); }
-      if (p.y_name) add(yAxisX - 8 - shifts.y(py) - tw(p.y_name.replace(/[_{}]/g, ''), NAME_FS * 0.64), py - NAME_FS / 2 - 3, yAxisX, py + NAME_FS / 2 + 3);
+      if (p.x_name) { const n = p.x_name.replace(/[_{}]/g, ''); const w = tw(n, NAME_FS); add(px - w / 2, xAxisY, px + w / 2, xAxisY + 5 + NAME_FS + 6 + shifts.x(px, n.length)); }
+      if (p.y_name) add(yAxisX - 8 - shifts.y(py) - tw(p.y_name.replace(/[_{}]/g, ''), NAME_FS), py - NAME_FS / 2 - 3, yAxisX, py + NAME_FS / 2 + 3);
     }
   }
 
   // axis labels (bold 12px; x is vertically centred, y sits on its baseline)
-  const lw = AXIS_LABEL_FS * 0.64;
-  add(xPos.x, xPos.y - AXIS_LABEL_FS * 0.65, xPos.x + tw(config.x_label, lw), xPos.y + AXIS_LABEL_FS * 0.65);
-  add(yPos.x, yPos.y - AXIS_LABEL_FS, yPos.x + tw(config.y_label, lw), yPos.y + 5);
+  add(xPos.x, xPos.y - AXIS_LABEL_FS * 0.6, xPos.x + tw(config.x_label, AXIS_LABEL_FS, 600), xPos.y + AXIS_LABEL_FS * 0.6);
+  add(yPos.x, yPos.y - AXIS_LABEL_FS * 0.8, yPos.x + tw(config.y_label, AXIS_LABEL_FS, 600), yPos.y + AXIS_LABEL_FS * 0.25);
 
   for (const t of config.texts ?? []) {
     const px = dim.marginLeft + (t.x - config.x_min) * scale.xScale;
     const py = dim.marginTop + (config.y_max - t.y) * scale.yScale;
-    add(px, py - 8, px + tw(t.text, 6.8), py + 8);
+    add(px, py - 8, px + tw(t.text, 12), py + 8);
   }
 
   return { x: x0 - CROP_PAD, y: y0 - CROP_PAD, w: x1 - x0 + 2 * CROP_PAD, h: y1 - y0 + 2 * CROP_PAD };
