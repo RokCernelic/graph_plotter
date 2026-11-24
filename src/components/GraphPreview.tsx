@@ -10,6 +10,7 @@ interface GraphPreviewProps {
   onUpdateConfig: (updates: Partial<GraphConfig>) => void;
   activeSeries: string;
   onAddPoints: (seriesId: string, pts: Array<{ x: number; y: number }>) => void;
+  onMovePoint: (seriesId: string, pointId: string, x: number, y: number) => void;
 }
 
 const PREVIEW_MAX = 640;
@@ -81,11 +82,12 @@ function LabelContextMenu({ axis, sx, sy, currentValue, onSelect, onClose }: {
   );
 }
 
-function TickContextMenu({ axis, sx, sy, currentMin, currentStep, onApply, onClose }: {
-  axis: 'x' | 'y'; sx: number; sy: number; currentMin: number; currentStep?: number;
-  onApply: (min: number, step: number | undefined) => void; onClose: () => void;
+function TickContextMenu({ axis, sx, sy, currentMin, currentMax, currentStep, onApply, onClose }: {
+  axis: 'x' | 'y'; sx: number; sy: number; currentMin: number; currentMax: number; currentStep?: number;
+  onApply: (min: number, max: number, step: number | undefined) => void; onClose: () => void;
 }) {
   const [minVal, setMinVal] = useState(String(currentMin));
+  const [maxVal, setMaxVal] = useState(String(currentMax));
   const [stepVal, setStepVal] = useState(currentStep != null ? String(currentStep) : '');
   const ref = useRef<HTMLDivElement>(null);
   useCloseOnOutside(ref, onClose);
@@ -93,9 +95,10 @@ function TickContextMenu({ axis, sx, sy, currentMin, currentStep, onApply, onClo
   const apply = () => {
     const min = parseFloat(minVal);
     const step = stepVal.trim() === '' ? undefined : parseFloat(stepVal);
-    if (isNaN(min)) return;
+    const max = parseFloat(maxVal);
+    if (isNaN(min) || isNaN(max) || min >= max) return;
     if (step !== undefined && (isNaN(step) || step <= 0)) return;
-    onApply(min, step);
+    onApply(min, max, step);
     onClose();
   };
   const onKey = (e: React.KeyboardEvent) => {
@@ -118,6 +121,12 @@ function TickContextMenu({ axis, sx, sy, currentMin, currentStep, onApply, onClo
       <input
         type="number" value={minVal}
         onChange={e => setMinVal(e.target.value)} onKeyDown={onKey}
+        style={{ width: '100%', boxSizing: 'border-box', marginBottom: 6 }}
+      />
+      <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 2 }}>Max</label>
+      <input
+        type="number" value={maxVal}
+        onChange={e => setMaxVal(e.target.value)} onKeyDown={onKey}
         style={{ width: '100%', boxSizing: 'border-box', marginBottom: 10 }}
       />
       <div style={{ display: 'flex', gap: 6 }}>
@@ -237,7 +246,7 @@ function DraggableLabel({ text, svgX, svgY, displayScale, isXLabel, onMove, onTe
   );
 }
 
-export default function GraphPreview({ config, onUpdateConfig, activeSeries, onAddPoints }: GraphPreviewProps) {
+export default function GraphPreview({ config, onUpdateConfig, activeSeries, onAddPoints, onMovePoint }: GraphPreviewProps) {
   const svgString = useMemo(
     () => generateGraphSVG(config, false, true),
     // label text/positions are rendered as an overlay, so they are intentionally not dependencies
@@ -250,6 +259,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
   const [isDragging, setIsDragging] = useState(false);
   const [menu, setMenu] = useState<MenuState>(null);
   const [drawLine, setDrawLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
 
   const naturalW = cmToPx(config.width_cm);
@@ -315,13 +325,20 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
     return Math.round(r * 1e6) / 1e6;
   }, []);
 
-  const toData = useCallback((clientX: number, clientY: number, rect: DOMRect) => {
+  const toData = useCallback((clientX: number, clientY: number, rect: DOMRect, free = false) => {
     const sx = (clientX - rect.left) / displayScale;
     const sy = (clientY - rect.top) / displayScale;
     const { dim, scale, xTicks, yTicks } = geo;
-    const x = snap(config.x_min + (sx - dim.marginLeft) / scale.xScale, xTicks, config.x_min, config.x_max);
-    const y = snap(config.y_max - (sy - dim.marginTop) / scale.yScale, yTicks, config.y_min, config.y_max);
-    return { x, y };
+    const rx = config.x_min + (sx - dim.marginLeft) / scale.xScale;
+    const ry = config.y_max - (sy - dim.marginTop) / scale.yScale;
+    if (free) {
+      const clamp = (v: number, a: number, b: number) => Math.round(Math.min(Math.max(v, a), b) * 100) / 100;
+      return { x: clamp(rx, config.x_min, config.x_max), y: clamp(ry, config.y_min, config.y_max) };
+    }
+    return {
+      x: snap(rx, xTicks, config.x_min, config.x_max),
+      y: snap(ry, yTicks, config.y_min, config.y_max),
+    };
   }, [geo, displayScale, snap, config.x_min, config.x_max, config.y_min, config.y_max]);
 
   // ── Shift + drag: draw a grid-snapped line, adds its end points ─────────
@@ -345,6 +362,24 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
     };
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+  };
+
+  // ── Drag existing points (grid-snapped, hold Alt for free placement) ────
+  const handlePointMouseDown = (e: React.MouseEvent, seriesId: string, pointId: string) => {
+    if (e.button !== 0 || e.shiftKey || !canvasRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = canvasRef.current.getBoundingClientRect();
+    const move = (ev: MouseEvent) => {
+      const p = toData(ev.clientX, ev.clientY, rect, ev.altKey);
+      onMovePoint(seriesId, pointId, p.x, p.y);
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
   };
 
   // ── Right-click on tick numbers ──────────────────────────────────────────
@@ -409,7 +444,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
       </div>
 
       <div className="no-print" style={{ fontSize: 11, color: 'var(--muted)' }}>
-        Shift + vleci po grafu = nariši črto (točke se dodajo izbrani seriji) · desni klik na številke osi = korak in min · oznake osi: vleci, dvojni klik, desni klik
+        Shift + vleci po grafu = nariši črto (točke se dodajo izbrani seriji) · desni klik na številke osi = korak in min · točke: vleci (Alt = prosto) · oznake osi: vleci, dvojni klik, desni klik
       </div>
 
       {/* Graph card with resize handle */}
@@ -425,6 +460,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
           userSelect: 'none',
         }}>
           <div
+            ref={canvasRef}
             onMouseDown={handleCanvasMouseDown}
             onContextMenu={handleCanvasContextMenu}
             style={{ width: displayW, height: displayH, flexShrink: 0, position: 'relative' }}
@@ -450,6 +486,22 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
                 })()}
               </svg>
             )}
+
+            <svg
+              viewBox={`0 0 ${dim.svgWidth} ${dim.svgHeight}`}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
+            >
+              {config.series.map(sr => sr.data_points.map(pt => (
+                <circle
+                  key={pt.id}
+                  cx={dim.marginLeft + (pt.x - config.x_min) * geo.scale.xScale}
+                  cy={dim.marginTop + (config.y_max - pt.y) * geo.scale.yScale}
+                  r="8" fill="transparent"
+                  style={{ pointerEvents: 'all', cursor: 'grab' }}
+                  onMouseDown={e => handlePointMouseDown(e, sr.id, pt.id)}
+                />
+              )))}
+            </svg>
 
             <DraggableLabel
               text={config.x_label}
@@ -510,13 +562,12 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
         <TickContextMenu
           axis={menu.axis} sx={menu.sx} sy={menu.sy}
           currentMin={menu.axis === 'x' ? config.x_min : config.y_min}
+          currentMax={menu.axis === 'x' ? config.x_max : config.y_max}
           currentStep={menu.axis === 'x' ? config.x_tick_step : config.y_tick_step}
-          onApply={(min, step) => {
-            if (menu.axis === 'x') {
-              if (min < config.x_max) onUpdateConfig({ x_min: min, x_tick_step: step });
-            } else if (min < config.y_max) {
-              onUpdateConfig({ y_min: min, y_tick_step: step });
-            }
+          onApply={(min, max, step) => {
+            onUpdateConfig(menu.axis === 'x'
+              ? { x_min: min, x_max: max, x_tick_step: step }
+              : { y_min: min, y_max: max, y_tick_step: step });
           }}
           onClose={closeMenu}
         />

@@ -2,6 +2,7 @@ import { GraphConfig, Series } from '@/types';
 import { getGraphDimensions, getScaleInfo, dataToPixel, generateTicks, GraphDimensions, ScaleInfo } from './graphCalculations';
 
 const ARROW_EXT = 14;
+const CLIP_PAD = 6; // data may overshoot the plot area slightly so edge points/lines are not cut off
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -146,7 +147,7 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
   // ── Defs ─────────────────────────────────────────────────────────────────
   lines.push(
     `<defs>` +
-    `<clipPath id="plot-area"><rect x="${dim.marginLeft}" y="${dim.marginTop}" width="${dim.plotWidth}" height="${dim.plotHeight}"/></clipPath>` +
+    `<clipPath id="plot-area"><rect x="${dim.marginLeft - CLIP_PAD}" y="${dim.marginTop - ARROW_EXT}" width="${dim.plotWidth + CLIP_PAD + ARROW_EXT}" height="${dim.plotHeight + ARROW_EXT + CLIP_PAD}"/></clipPath>` +
     `<marker id="arr" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto">` +
     `<path d="M 0 0 L 9 3.5 L 0 7 Z" fill="#2c2c2c"/>` +
     `</marker>` +

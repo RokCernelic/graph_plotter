@@ -1,17 +1,105 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GraphConfig, Series, SERIES_COLORS, DEFAULT_GRAPH_CONFIG } from '@/types';
 import DataTable from '@/components/DataTable';
 import Controls from '@/components/Controls';
 import GraphPreview from '@/components/GraphPreview';
 import SaveLoad from '@/components/SaveLoad';
+import AiGraph from '@/components/AiGraph';
 import { generateGraphSVG, svgToPng, downloadPng } from '@/utils/svgGenerator';
 import { autoFitAxes } from '@/utils/graphCalculations';
 
 export default function Home() {
-  const [config, setConfig] = useState<GraphConfig>(DEFAULT_GRAPH_CONFIG);
+  const [config, setConfigState] = useState<GraphConfig>(DEFAULT_GRAPH_CONFIG);
   const [activeSeries, setActiveSeries] = useState<string>(DEFAULT_GRAPH_CONFIG.series[0].id);
+
+  // ── Undo / redo ──────────────────────────────────────────────────────────
+  // Changes arriving within 500 ms of each other (typing, dragging) form one undo step.
+  const configRef = useRef<GraphConfig>(DEFAULT_GRAPH_CONFIG);
+  const past = useRef<GraphConfig[]>([]);
+  const future = useRef<GraphConfig[]>([]);
+  const lastChange = useRef(0);
+  const [flags, setFlags] = useState({ undo: false, redo: false });
+  const syncFlags = () => setFlags({ undo: past.current.length > 0, redo: future.current.length > 0 });
+
+  const setConfig = useCallback((u: GraphConfig | ((prev: GraphConfig) => GraphConfig)) => {
+    const prev = configRef.current;
+    const next = typeof u === 'function' ? u(prev) : u;
+    if (next === prev) return;
+    const now = Date.now();
+    if (now - lastChange.current > 500) {
+      past.current.push(prev);
+      if (past.current.length > 100) past.current.shift();
+    }
+    lastChange.current = now;
+    future.current = [];
+    configRef.current = next;
+    setConfigState(next);
+    setFlags({ undo: past.current.length > 0, redo: false });
+  }, []);
+
+  const restore = useCallback((target: GraphConfig) => {
+    configRef.current = target;
+    lastChange.current = 0;
+    setConfigState(target);
+    setActiveSeries(cur => target.series.some(x => x.id === cur) ? cur : target.series[0].id);
+    syncFlags();
+  }, []);
+
+  const undo = useCallback(() => {
+    const target = past.current.pop();
+    if (!target) return;
+    future.current.push(configRef.current);
+    restore(target);
+  }, [restore]);
+
+  const redo = useCallback(() => {
+    const target = future.current.pop();
+    if (!target) return;
+    past.current.push(configRef.current);
+    restore(target);
+  }, [restore]);
+
+  // ── Autosave: restore last session on load, save on every change ────────
+  const AUTOSAVE_KEY = 'grafikograf_autosave';
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(AUTOSAVE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as { config?: GraphConfig; activeSeries?: string };
+        if (saved.config && Array.isArray(saved.config.series) && saved.config.series.length > 0) {
+          configRef.current = saved.config;
+          setConfigState(saved.config);
+          const ids = saved.config.series.map(x => x.id);
+          setActiveSeries(saved.activeSeries && ids.includes(saved.activeSeries) ? saved.activeSeries : ids[0]);
+        }
+      }
+    } catch { /* corrupt or unavailable storage: start fresh */ }
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ config, activeSeries }));
+    } catch { /* storage full or blocked */ }
+  }, [config, activeSeries, restored]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
 
   // ── Series management ────────────────────────────────────────────────────
 
@@ -71,6 +159,15 @@ export default function Home() {
     }));
   }, []);
 
+  const handleMovePoint = useCallback((seriesId: string, pointId: string, x: number, y: number) => {
+    setConfig(prev => ({
+      ...prev,
+      series: prev.series.map(s =>
+        s.id === seriesId ? { ...s, data_points: s.data_points.map(p => p.id === pointId ? { ...p, x, y } : p) } : s
+      ),
+    }));
+  }, []);
+
   const handleRemovePoint = useCallback((seriesId: string, pointId: string) => {
     setConfig(prev => {
       const newSeries = prev.series.map(s =>
@@ -113,6 +210,11 @@ export default function Home() {
     setActiveSeries(migrated.series?.[0]?.id ?? '1');
   }, []);
 
+  const handleApplyAi = useCallback((graph: Partial<GraphConfig>) => {
+    setConfig(prev => ({ ...prev, ...graph }));
+    if (graph.series?.[0]) setActiveSeries(graph.series[0].id);
+  }, []);
+
   const handleExportPng = useCallback(async () => {
     try {
       const blob = await svgToPng(generateGraphSVG(config, true));
@@ -151,6 +253,16 @@ export default function Home() {
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>Fizika — razredi 8 in 9</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary no-print" onClick={undo} disabled={!flags.undo} title="Razveljavi (Ctrl/⌘ + Z)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9,14 4,9 9,4" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+            </svg>
+          </button>
+          <button className="btn btn-secondary no-print" onClick={redo} disabled={!flags.redo} title="Uveljavi (Ctrl/⌘ + Shift + Z)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15,14 20,9 15,4" /><path d="M4 20v-7a4 4 0 0 1 4-4h12" />
+            </svg>
+          </button>
           <button className="btn btn-secondary no-print" onClick={() => window.print()}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6,9 6,2 18,2 18,9" /><path d="M6,18H4a2,2,0,0,1-2-2V11a2,2,0,0,1,2-2H20a2,2,0,0,1,2,2v5a2,2,0,0,1-2,2H18" /><rect x="6" y="14" width="12" height="8" />
@@ -181,6 +293,8 @@ export default function Home() {
           flexDirection: 'column',
           gap: 0,
         }}>
+          <AiGraph onApply={handleApplyAi} />
+          <hr className="divider" />
           <Controls config={config} onUpdateConfig={handleUpdateConfig} />
           <hr className="divider" />
           <DataTable
@@ -202,7 +316,7 @@ export default function Home() {
 
         {/* Main graph area */}
         <main style={{ flex: 1, overflow: 'auto', padding: 32, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-          <GraphPreview config={config} onUpdateConfig={handleUpdateConfig} activeSeries={activeSeries} onAddPoints={handleAddPoints} />
+          <GraphPreview config={config} onUpdateConfig={handleUpdateConfig} activeSeries={activeSeries} onAddPoints={handleAddPoints} onMovePoint={handleMovePoint} />
         </main>
       </div>
     </div>
