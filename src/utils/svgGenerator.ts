@@ -1,5 +1,5 @@
 import { GraphConfig, Series } from '@/types';
-import { getGraphDimensions, getScaleInfo, dataToPixel, generateTicks, GraphDimensions, ScaleInfo } from './graphCalculations';
+import { getGridMode, getGraphDimensions, getScaleInfo, dataToPixel, generateTicks, GraphDimensions, ScaleInfo } from './graphCalculations';
 
 const ARROW_EXT = 30;
 export const AXIS_LABEL_FS = 15;
@@ -268,12 +268,13 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
 
   // ── Grid lines ────────────────────────────────────────────────────────────
   lines.push('<g stroke="#d4d4d4" stroke-width="1">');
-  for (const tick of config.hide_grid ? [] : xTicks) {
+  const gm = getGridMode(config);
+  for (const tick of gm === 'both' || gm === 'vertical' ? xTicks : []) {
     const px = dim.marginLeft + (tick.value - config.x_min) * scale.xScale;
     if (px > dim.marginLeft + 0.5 && px < dim.marginLeft + dim.plotWidth - 0.5)
       lines.push(`<line x1="${px.toFixed(1)}" y1="${dim.marginTop}" x2="${px.toFixed(1)}" y2="${dim.marginTop + dim.plotHeight}"/>`);
   }
-  for (const tick of config.hide_grid ? [] : yTicks) {
+  for (const tick of gm === 'both' || gm === 'horizontal' ? yTicks : []) {
     const py = dim.marginTop + (config.y_max - tick.value) * scale.yScale;
     if (py > dim.marginTop + 0.5 && py < dim.marginTop + dim.plotHeight - 0.5)
       lines.push(`<line x1="${dim.marginLeft}" y1="${py.toFixed(1)}" x2="${dim.marginLeft + dim.plotWidth}" y2="${py.toFixed(1)}"/>`);

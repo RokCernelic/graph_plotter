@@ -68,6 +68,10 @@ export function dataToPixel(
   };
 }
 
+export function getGridMode(config: GraphConfig): 'both' | 'vertical' | 'horizontal' | 'none' {
+  return config.grid_mode ?? (config.hide_grid ? 'none' : 'both');
+}
+
 export interface TickInfo {
   value: number;
   label: string;

@@ -18,6 +18,8 @@ export interface Series {
 
 export interface LabelPos { x: number; y: number; }
 
+export type GridMode = 'both' | 'vertical' | 'horizontal' | 'none';
+
 export interface Guide { id: string; x1: number; y1: number; x2: number; y2: number; }
 
 export interface TextNote { id: string; text: string; x: number; y: number; }
@@ -44,6 +46,7 @@ export interface GraphConfig {
   guides?: Guide[];
   hide_numbers?: boolean;
   hide_grid?: boolean;
+  grid_mode?: GridMode;
 }
 
 export const DEFAULT_GRAPH_CONFIG: GraphConfig = {

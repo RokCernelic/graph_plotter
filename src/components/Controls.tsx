@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GraphConfig } from '@/types';
+import { GraphConfig, GridMode } from '@/types';
+import { getGridMode } from '@/utils/graphCalculations';
 import NumInput from './NumInput';
 
 interface ControlsProps {
@@ -189,10 +190,17 @@ export default function Controls({ config, onUpdateConfig }: ControlsProps) {
         <input type="checkbox" checked={!!config.hide_numbers} onChange={e => onUpdateConfig({ hide_numbers: e.target.checked })} style={{ width: 'auto' }} />
         Brez številk na oseh
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--body)', cursor: 'pointer' }}>
-        <input type="checkbox" checked={!!config.hide_grid} onChange={e => onUpdateConfig({ hide_grid: e.target.checked })} style={{ width: 'auto' }} />
-        Brez mreže
-      </label>
+      <Field label="Mreža">
+        <select
+          value={getGridMode(config)}
+          onChange={e => onUpdateConfig({ grid_mode: e.target.value as GridMode, hide_grid: false })}
+        >
+          <option value="both">Navpične in vodoravne črte</option>
+          <option value="vertical">Samo navpične črte</option>
+          <option value="horizontal">Samo vodoravne črte</option>
+          <option value="none">Brez mreže</option>
+        </select>
+      </Field>
 
       <hr className="divider" style={{ margin: '12px 0' }} />
 
