@@ -360,7 +360,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    if (textMode && !e.shiftKey) {
+    if (textMode && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       const p = toData(e.clientX, e.clientY, rect, true);
       const note: TextNote = { id: crypto.randomUUID(), text: 'Besedilo', x: p.x, y: p.y };
@@ -369,9 +369,10 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
       setTextMode(false);
       return;
     }
-    // plain drag: grid-snapped data line; Shift + drag: free dashed helper line
+    // Shift + drag: grid-snapped data (trend) line; Alt + drag: dashed helper line
+    if (!e.shiftKey && !e.altKey) return;
     e.preventDefault();
-    const helper = e.shiftKey;
+    const helper = e.altKey;
     const start = toData(e.clientX, e.clientY, rect);
     setDrawLine({ x1: start.x, y1: start.y, x2: start.x, y2: start.y, helper });
 
@@ -492,7 +493,7 @@ export default function GraphPreview({ config, onUpdateConfig, activeSeries, onA
       </div>
 
       <div className="no-print" style={{ fontSize: 11, color: 'var(--muted)' }}>
-        Vleci po grafu = nariši črto (točke se dodajo izbrani seriji) · Shift + vleci = črtkana pomožna črta, tudi po mreži (desni klik nanjo jo izbriše) · gumb »T« + klik = besedilo · desni klik na številke osi = korak in min · točke: vleci (Alt = prosto) · oznake osi: vleci, dvojni klik, desni klik
+        Shift + vleci = nariši črto (točke se dodajo izbrani seriji) · Alt + vleci = črtkana pomožna črta (desni klik nanjo jo izbriše); oboje po mreži · gumb »T« + klik = besedilo · desni klik na številke osi = korak in min · točke: vleci (Alt = prosto) · oznake osi: vleci, dvojni klik, desni klik
       </div>
 
       {/* Graph card with resize handle */}

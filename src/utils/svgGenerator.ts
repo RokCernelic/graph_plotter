@@ -393,21 +393,6 @@ export function generateGraphSVG(config: GraphConfig, forExport = false, skipLab
     lines.push('</g>');
   }
 
-  // ── Legend (only when multiple series have data) ──────────────────────────
-  const seriesWithData = config.series.filter(s => s.data_points.length > 0);
-  if (seriesWithData.length > 1) {
-    const lx = dim.marginLeft + dim.plotWidth - 6;
-    let ly = dim.marginTop + 10;
-    lines.push('<g font-family="Inter, system-ui, sans-serif" font-size="10" fill="#2c2c2c">');
-    for (const s of seriesWithData) {
-      lines.push(`<line x1="${(lx - 20).toFixed(1)}" y1="${ly}" x2="${(lx - 6).toFixed(1)}" y2="${ly}" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round"/>`);
-      lines.push(`<circle cx="${(lx - 13).toFixed(1)}" cy="${ly}" r="2.5" fill="${s.color}"/>`);
-      lines.push(`<text x="${(lx - 25).toFixed(1)}" y="${ly}" text-anchor="end" dominant-baseline="central">${escapeXml(s.name)}</text>`);
-      ly += 14;
-    }
-    lines.push('</g>');
-  }
-
   lines.push('</svg>');
   return lines.join('\n');
 }
